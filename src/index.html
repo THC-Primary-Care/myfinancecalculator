@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PCN ARRS Workforce Planning Calculator 2025-26</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Supabase JavaScript client library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+      :root {
+        --primary-color: #00999e;
+        --secondary-color: #00b5bb;
+        --accent-color: #00ccd2;
+        --success-color: #34a853;
+        --warning-color: #ea4335;
+        --background-color: #f8f9fa;
+        --card-bg: #ffffff;
+        --text-color: #202124;
+        --border-color: #dadce0;
+      }
+
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        font-family: "Poppins", sans-serif;
+        background-color: var(--background-color);
+        height: 100%;
+        overflow: hidden;
+      }
+
+      /* Modal styles */
+      .auth-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .auth-modal.show {
+        display: flex;
+      }
+
+      .modal-content {
+        background-color: white;
+        border-radius: 8px;
+        padding: 30px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      .modal-header {
+        margin-bottom: 20px;
+      }
+
+      .modal-footer {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-size: 16px;
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+      }
+
+      button.primary {
+        background-color: var(--primary-color);
+        color: white;
+        transition: all 0.3s ease;
+      }
+
+      button.primary:hover {
+        background-color: var(--secondary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 153, 158, 0.3);
+      }
+
+      button.secondary {
+        background-color: var(--background-color);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+      }
+
+      button.secondary:hover {
+        background-color: #f0f0f0;
+        border-color: var(--primary-color);
+      }
+
+      /* User display styles */
+      .user-bar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        left: 0;
+        background-color: var(--primary-color);
+        color: white;
+        padding: 5px 20px;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        z-index: 1000;
+        height: 40px;
+      }
+
+      .user-display {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+      }
+
+      .user-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: white;
+        color: var(--primary-color);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+      }
+
+      .user-info {
+        font-size: 14px;
+      }
+
+      .user-dropdown {
+        position: absolute;
+        right: 20px;
+        top: 45px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        display: none;
+        padding: 10px 0;
+        z-index: 1001;
+      }
+
+      .user-dropdown.show {
+        display: block;
+      }
+
+      .user-dropdown-item {
+        padding: 10px 20px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        color: var(--text-color);
+      }
+
+      .user-dropdown-item:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .sync-status {
+        margin-right: 20px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .sync-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #34a853; /* Green when synced */
+      }
+
+      .sync-indicator.syncing {
+        background-color: #fbbc05; /* Yellow when syncing */
+        animation: pulse 1.5s infinite;
+      }
+
+      .sync-indicator.offline {
+        background-color: #ea4335; /* Red when offline */
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 0.6;
+        }
+        50% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.6;
+        }
+      }
+
+      iframe {
+        width: 100%;
+        height: calc(100% - 40px);
+        border: none;
+        margin-top: 40px;
+      }
+
+      /* Notification */
+      .notification {
+        position: fixed;
+        bottom: -100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--primary-color);
+        color: white;
+        padding: 15px 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+        z-index: 10001;
+        opacity: 0;
+      }
+
+      .notification.show {
+        bottom: 20px;
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Login Modal -->
+    <div class="auth-modal" id="login-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Login Required</h2>
+          <p>Please sign in to access your calculator data.</p>
+        </div>
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="Enter your email" />
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input
+            type="password"
+            id="login-password"
+            placeholder="Enter your password"
+          />
+        </div>
+        <div class="modal-footer">
+          <button id="login-button" class="primary">Login</button>
+          <button id="signup-button" class="secondary">Sign Up</button>
+          <button id="skip-login-button" class="secondary">
+            Continue Without Login
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- User bar at the top -->
+    <div class="user-bar">
+      <div class="sync-status" id="sync-status">
+        <div class="sync-indicator" id="sync-indicator"></div>
+        <span id="sync-text">Synced</span>
+      </div>
+      <div class="user-display" id="user-display" style="display: none">
+        <div class="user-avatar" id="user-avatar"></div>
+        <div class="user-info" id="user-email">user@example.com</div>
+      </div>
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="user-dropdown-item" id="logout-button">Logout</div>
+        <div class="user-dropdown-item" id="force-sync-button">Force Sync</div>
+      </div>
+    </div>
+
+    <!-- Notification element -->
+    <div class="notification" id="notification"></div>
+
+    <!-- Calculator iframe will be loaded here -->
+    <iframe id="calculator-frame" src="about:blank"></iframe>
+
+    <script>
+      // Supabase configuration
+
+      const SUPABASE_URL = "https://htywzfsnuhgaepprtaey.supabase.co"; // Replace with your project URL
+      const SUPABASE_ANON_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0eXd6ZnNudWhnYWVwcHJ0YWV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc1OTY5MjIsImV4cCI6MjA2MzE3MjkyMn0.jOUmk5zTtFD0apEDbhzWf_h2ALASljeLjbvl7m5wl_I"; // Replace with your anon key
+      const supabaseClient = supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+      );
+
+      // Current user variables
+      let currentUser = null;
+      let skipLogin = false;
+      let isOnline = navigator.onLine;
+      let isSyncing = false;
+
+      // DOM Elements
+      const loginModal = document.getElementById("login-modal");
+      const loginEmailInput = document.getElementById("login-email");
+      const loginPasswordInput = document.getElementById("login-password");
+      const loginButton = document.getElementById("login-button");
+      const signupButton = document.getElementById("signup-button");
+      const skipLoginButton = document.getElementById("skip-login-button");
+      const userDisplay = document.getElementById("user-display");
+      const userAvatar = document.getElementById("user-avatar");
+      const userEmail = document.getElementById("user-email");
+      const userDropdown = document.getElementById("user-dropdown");
+      const logoutButton = document.getElementById("logout-button");
+      const forceSyncButton = document.getElementById("force-sync-button");
+      const calculatorFrame = document.getElementById("calculator-frame");
+      const syncIndicator = document.getElementById("sync-indicator");
+      const syncText = document.getElementById("sync-text");
+
+      // Service Worker Registration
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("./sw.js").then(
+            function (registration) {
+              console.log(
+                "Service Worker registered with scope:",
+                registration.scope
+              );
+            },
+            function (err) {
+              console.log("Service Worker registration failed:", err);
+            }
+          );
+        });
+      }
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", init);
+
+      function init() {
+        // Check for current session
+        checkSession();
+
+        // Event listeners
+        loginButton.addEventListener("click", handleLogin);
+        signupButton.addEventListener("click", handleSignup);
+        skipLoginButton.addEventListener("click", handleSkipLogin);
+        userDisplay.addEventListener("click", toggleUserDropdown);
+        logoutButton.addEventListener("click", handleLogout);
+        forceSyncButton.addEventListener("click", forceSyncData);
+        document.addEventListener("click", handleClickOutside);
+
+        // Online/Offline detection
+        window.addEventListener("online", updateOnlineStatus);
+        window.addEventListener("offline", updateOnlineStatus);
+
+        // Load the calculator in the iframe
+        calculatorFrame.src = "pcn_calculator.html";
+
+        // Listen for messages from the iframe
+        window.addEventListener("message", handleFrameMessage);
+
+        // Update online status initially
+        updateOnlineStatus();
+      }
+
+      // Auth Functions
+      async function checkSession() {
+        try {
+          const {
+            data: { user },
+            error,
+          } = await supabaseClient.auth.getUser();
+
+          if (error || !user) {
+            showLoginModal();
+            return;
+          }
+
+          // User is logged in
+          currentUser = user;
+          updateUserDisplay();
+          hideLoginModal();
+        } catch (error) {
+          console.error("Error checking session:", error);
+          showLoginModal();
+        }
+      }
+
+      function showLoginModal() {
+        loginModal.classList.add("show");
+      }
+
+      function hideLoginModal() {
+        loginModal.classList.remove("show");
+      }
+
+      async function handleLogin() {
+        const email = loginEmailInput.value.trim();
+        const password = loginPasswordInput.value.trim();
+
+        if (!email || !password) {
+          showNotification("Please enter both email and password");
+          return;
+        }
+
+        try {
+          const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (error) {
+            showNotification(error.message);
+            return;
+          }
+
+          // Login successful
+          currentUser = data.user;
+          hideLoginModal();
+          updateUserDisplay();
+
+          // Load user data from Supabase and send to iframe
+          await loadUserData();
+
+          showNotification("Login successful");
+        } catch (error) {
+          console.error("Login error:", error);
+          showNotification("Login failed. Please try again.");
+        }
+      }
+
+      async function handleSignup() {
+        const email = loginEmailInput.value.trim();
+        const password = loginPasswordInput.value.trim();
+
+        if (!email || !password) {
+          showNotification("Please enter both email and password");
+          return;
+        }
+
+        try {
+          const { data, error } = await supabaseClient.auth.signUp({
+            email,
+            password,
+          });
+
+          if (error) {
+            showNotification(error.message);
+            return;
+          }
+
+          // Signup successful
+          showNotification("Signup successful. Please verify your email.");
+
+          // Some Supabase configurations auto-confirm email, so we check if we have a session
+          if (data.user && !data.user.confirmed_at) {
+            // Need email confirmation
+            currentUser = null;
+          } else {
+            // Auto-confirmed
+            currentUser = data.user;
+            hideLoginModal();
+            updateUserDisplay();
+
+            // Create user record in database
+            await initializeUserData();
+          }
+        } catch (error) {
+          console.error("Signup error:", error);
+          showNotification("Signup failed. Please try again.");
+        }
+      }
+
+      function handleSkipLogin() {
+        skipLogin = true;
+        hideLoginModal();
+
+        // Just load the calculator with localStorage only
+        calculatorFrame.contentWindow.postMessage(
+          {
+            type: "USE_LOCAL_STORAGE_ONLY",
+          },
+          "*"
+        );
+
+        showNotification(
+          "Using local storage only. Your data will not be synced."
+        );
+      }
+
+      async function handleLogout() {
+        try {
+          await supabaseClient.auth.signOut();
+          currentUser = null;
+          updateUserDisplay();
+          hideUserDropdown();
+
+          // Tell the calculator to clear session data
+          calculatorFrame.contentWindow.postMessage(
+            {
+              type: "LOGOUT",
+            },
+            "*"
+          );
+
+          showNotification("Logged out successfully");
+        } catch (error) {
+          console.error("Logout error:", error);
+          showNotification("Logout failed. Please try again.");
+        }
+      }
+
+      function updateUserDisplay() {
+        if (currentUser) {
+          userDisplay.style.display = "flex";
+          userEmail.textContent = currentUser.email;
+          userAvatar.textContent = currentUser.email.charAt(0).toUpperCase();
+        } else {
+          userDisplay.style.display = "none";
+        }
+      }
+
+      function toggleUserDropdown() {
+        userDropdown.classList.toggle("show");
+      }
+
+      function hideUserDropdown() {
+        userDropdown.classList.remove("show");
+      }
+
+      function handleClickOutside(event) {
+        if (
+          userDropdown.classList.contains("show") &&
+          !userDisplay.contains(event.target) &&
+          !userDropdown.contains(event.target)
+        ) {
+          hideUserDropdown();
+        }
+      }
+
+      // Data Sync Functions
+      async function loadUserData() {
+        try {
+          if (!currentUser) return;
+
+          setSyncStatus("syncing");
+
+          const { data, error } = await supabaseClient
+            .from("pcn_calculator_data")
+            .select("*")
+            .eq("user_id", currentUser.id)
+            .single();
+
+          if (error) {
+            console.error("Error loading user data:", error);
+            // If no data exists yet, initialize it
+            if (error.code === "PGRST116") {
+              await initializeUserData();
+              return;
+            }
+
+            setSyncStatus("error");
+            return;
+          }
+
+          if (data) {
+            // Send data to iframe
+            calculatorFrame.contentWindow.postMessage(
+              {
+                type: "LOAD_USER_DATA",
+                userData: {
+                  staffList: data.staff_list ? JSON.parse(data.staff_list) : [],
+                  monthlyPrefs: data.monthly_prefs
+                    ? JSON.parse(data.monthly_prefs)
+                    : {},
+                  financialData: data.financial_data
+                    ? JSON.parse(data.financial_data)
+                    : {},
+                },
+              },
+              "*"
+            );
+
+            setSyncStatus("synced");
+          }
+        } catch (error) {
+          console.error("Error in loadUserData:", error);
+          setSyncStatus("error");
+        }
+      }
+
+      async function initializeUserData() {
+        try {
+          if (!currentUser) return;
+
+          setSyncStatus("syncing");
+
+          // Get data from iframe to save as initial data
+          calculatorFrame.contentWindow.postMessage(
+            {
+              type: "GET_CURRENT_DATA",
+            },
+            "*"
+          );
+        } catch (error) {
+          console.error("Error in initializeUserData:", error);
+          setSyncStatus("error");
+        }
+      }
+
+      async function saveUserData(data) {
+        try {
+          if (!currentUser) return;
+
+          setSyncStatus("syncing");
+
+          const { error } = await supabaseClient
+            .from("pcn_calculator_data")
+            .upsert(
+              {
+                user_id: currentUser.id,
+                staff_list: JSON.stringify(data.staffList || []),
+                monthly_prefs: JSON.stringify(data.monthlyPrefs || {}),
+                financial_data: JSON.stringify(data.financialData || {}),
+                last_updated: new Date().toISOString(),
+              },
+              {
+                onConflict: "user_id", // Specify the column to use for conflict detection
+              }
+            );
+
+          if (error) {
+            console.error("Error saving user data:", error);
+            setSyncStatus("error");
+            return;
+          }
+
+          setSyncStatus("synced");
+        } catch (error) {
+          console.error("Error in saveUserData:", error);
+          setSyncStatus("error");
+        }
+      }
+
+      // Force sync of data from iframe to Supabase
+      function forceSyncData() {
+        if (!currentUser) return;
+
+        calculatorFrame.contentWindow.postMessage(
+          {
+            type: "GET_CURRENT_DATA",
+          },
+          "*"
+        );
+
+        hideUserDropdown();
+      }
+
+      // Handle messages from iframe
+      function handleFrameMessage(event) {
+        const message = event.data;
+
+        if (message && message.type === "CURRENT_DATA") {
+          // Got data from iframe, save to Supabase
+          saveUserData(message.data);
+        } else if (message && message.type === "DATA_UPDATED") {
+          // Data was updated in iframe, sync to Supabase
+          if (currentUser) {
+            calculatorFrame.contentWindow.postMessage(
+              {
+                type: "GET_CURRENT_DATA",
+              },
+              "*"
+            );
+          }
+        }
+      }
+
+      // Update online status indicator
+      function updateOnlineStatus() {
+        isOnline = navigator.onLine;
+
+        if (!isOnline) {
+          setSyncStatus("offline");
+        } else if (currentUser) {
+          // When coming back online, force a sync
+          forceSyncData();
+        }
+      }
+
+      // Set sync status indicator
+      function setSyncStatus(status) {
+        syncIndicator.className = "sync-indicator";
+
+        switch (status) {
+          case "syncing":
+            syncIndicator.classList.add("syncing");
+            syncText.textContent = "Syncing...";
+            isSyncing = true;
+            break;
+          case "synced":
+            syncText.textContent = "Synced";
+            isSyncing = false;
+            break;
+          case "offline":
+            syncIndicator.classList.add("offline");
+            syncText.textContent = "Offline";
+            isSyncing = false;
+            break;
+          case "error":
+            syncIndicator.classList.add("offline");
+            syncText.textContent = "Sync Error";
+            isSyncing = false;
+            break;
+        }
+      }
+
+      // Show notification
+      let notificationQueue = [];
+      let notificationTimeout = null;
+
+      function showNotification(message) {
+        console.log("Showing notification:", message);
+        // Add message to queue
+        notificationQueue.push(message);
+
+        // If no active notification, show this one
+        if (notificationQueue.length === 1 && !notificationTimeout) {
+          displayNextNotification();
+        }
+      }
+
+      function displayNextNotification() {
+        if (notificationQueue.length === 0) return;
+
+        const notification = document.getElementById("notification");
+        notification.textContent = notificationQueue[0];
+        notification.classList.add("show");
+
+        // Clear any existing timeout
+        if (notificationTimeout) {
+          clearTimeout(notificationTimeout);
+        }
+
+        // Set timeout to hide notification and show next one
+        notificationTimeout = setTimeout(() => {
+          notification.classList.remove("show");
+
+          // Wait for transition to complete before showing next
+          setTimeout(() => {
+            notificationQueue.shift();
+            notificationTimeout = null;
+            if (notificationQueue.length > 0) {
+              displayNextNotification();
+            }
+          }, 300);
+        }, 3000);
+      }
+    </script>
+  </body>
+</html>
