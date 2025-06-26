@@ -11,12 +11,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "npm"
-      - run: npm install
-      - run: npm run build
+      # - uses: actions/setup-node@v4
+      #   with:
+      #     node-version: 20
+      #     cache: "npm"
+      # - run: npm install
+      # - run: npm run build
       - name: Setup AWS CLI
         uses: aws-actions/configure-aws-credentials@v4
         with:
